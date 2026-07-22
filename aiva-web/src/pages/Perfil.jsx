@@ -1,0 +1,304 @@
+import { useState, useEffect } from 'react'
+import { Link, useNavigate } from 'react-router-dom'
+import { storage, getPerfilActivoId, getPerfilPrincipal, getPerfilesAdicionales } from '../data/storage'
+
+const AVATARES = ['👤','👨','👩','🧑','👦','👧','👴','👵','👶','🧒','🧓','🎅','🤶','🤖','👽','👸','🤴','🦸','🦹','🧙']
+
+const EditIcon = () => (
+  <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+    <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+  </svg>
+)
+const AddPersonIcon = () => (
+  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/>
+    <line x1="20" y1="8" x2="20" y2="14"/><line x1="23" y1="11" x2="17" y2="11"/>
+  </svg>
+)
+const ResetIcon = () => (
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+    <polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-3.69"/>
+  </svg>
+)
+const TrashIcon = () => (
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+    <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/>
+    <path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/>
+  </svg>
+)
+const ChevronIcon = ({ open }) => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <polyline points={open ? "18 15 12 9 6 15" : "6 9 12 15 18 9"}/>
+  </svg>
+)
+
+export default function Perfil() {
+  const navigate = useNavigate()
+  const [nombre, setNombre] = useState('')
+  const [altura, setAltura] = useState('')
+  const [peso, setPeso] = useState('')
+  const [fechaNacimiento, setFechaNacimiento] = useState('')
+  const [avatar, setAvatar] = useState('👤')
+  const [editando, setEditando] = useState(false)
+  const [showAvatares, setShowAvatares] = useState(false)
+  const [esPrincipal, setEsPrincipal] = useState(true)
+  const [perfilId, setPerfilId] = useState('principal')
+  const [perfilesDisponibles, setPerfilesDisponibles] = useState([])
+  const [showNuevoPerfil, setShowNuevoPerfil] = useState(false)
+  const [nuevoNombre, setNuevoNombre] = useState('')
+  const [nuevaAltura, setNuevaAltura] = useState('')
+  const [nuevoPeso, setNuevoPeso] = useState('')
+  const [showInstalar, setShowInstalar] = useState(false)
+
+  useEffect(() => { cargar(getPerfilActivoId()) }, [])
+
+  const cargar = (id) => {
+    storage.set('perfil_activo_id', id)
+    setPerfilId(id)
+    setEditando(false)
+    setShowAvatares(false)
+    if (id === 'principal') {
+      const p = getPerfilPrincipal()
+      if (p) { setNombre(p.nombre || ''); setAltura(p.altura || ''); setPeso(p.peso || ''); setFechaNacimiento(p.fechaNacimiento || ''); setAvatar(p.avatar || '👤') }
+      setEsPrincipal(true)
+    } else {
+      const adicionales = getPerfilesAdicionales()
+      const p = adicionales.find(p => p.id === id)
+      if (p) { setNombre(p.nombre || ''); setAltura(p.altura || ''); setPeso(p.peso || ''); setFechaNacimiento(p.fechaNacimiento || ''); setAvatar(p.avatar || '👤') }
+      setEsPrincipal(false)
+    }
+    const principal = getPerfilPrincipal()
+    const adicionales = getPerfilesAdicionales()
+    setPerfilesDisponibles([
+      { id: 'principal', nombre: principal?.nombre || 'Principal' },
+      ...adicionales.map(p => ({ id: p.id, nombre: p.nombre }))
+    ])
+  }
+
+  const guardar = () => {
+    const datos = { nombre, altura, peso, fechaNacimiento, avatar }
+    if (esPrincipal) {
+      storage.setJSON('perfil_principal', datos)
+    } else {
+      const adicionales = getPerfilesAdicionales()
+      storage.setJSON('perfiles_adicionales', adicionales.map(p => p.id === perfilId ? { ...p, ...datos } : p))
+    }
+    setEditando(false)
+    setShowAvatares(false)
+    cargar(perfilId)
+  }
+
+  const agregarPerfil = () => {
+    if (!nuevoNombre.trim()) return
+    const adicionales = getPerfilesAdicionales()
+    const nuevo = { id: `perfil_${Date.now()}`, nombre: nuevoNombre.trim(), altura: nuevaAltura, peso: nuevoPeso, avatar: '👤' }
+    storage.setJSON('perfiles_adicionales', [...adicionales, nuevo])
+    storage.set('perfil_activo_id', nuevo.id)
+    setShowNuevoPerfil(false)
+    setNuevoNombre(''); setNuevaAltura(''); setNuevoPeso('')
+    cargar(nuevo.id)
+    navigate('/')
+  }
+
+  const resetear = () => {
+    if (!confirm(`¿Borrar todas las medidas de ${nombre || 'este perfil'}?`)) return
+    const cats = ['Gorras y sombreros','Remeras y camisetas','Buzos y sweaters','Camperas','Jeans y pantalones','Zapatillas y Zapatos','Tapados y abrigos','Camisas','Blusas','Vestidos y enteritos','Shorts','Polleras y faldas','Ropa interior','Medias','Guantes','Musculosas','Botas','Tacos y stilettos','Trajes y sacos']
+    cats.forEach(cat => storage.remove(`medidas_${perfilId}_${cat}`))
+    storage.remove(`prendas_personalizadas_${perfilId}`)
+    alert('Medidas reseteadas correctamente')
+  }
+
+  const eliminar = () => {
+    if (!confirm(`¿Eliminar el perfil de ${nombre}? Esta acción no se puede deshacer.`)) return
+    const adicionales = getPerfilesAdicionales()
+    storage.setJSON('perfiles_adicionales', adicionales.filter(p => p.id !== perfilId))
+    storage.remove(`prendas_personalizadas_${perfilId}`)
+    storage.set('perfil_activo_id', 'principal')
+    navigate('/')
+  }
+
+  const formatFecha = (text) => {
+    const limpio = text.replace(/\D/g, '').slice(0, 8)
+    if (limpio.length > 4) return `${limpio.slice(0,2)}/${limpio.slice(2,4)}/${limpio.slice(4)}`
+    if (limpio.length > 2) return `${limpio.slice(0,2)}/${limpio.slice(2)}`
+    return limpio
+  }
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', background: 'var(--bg)' }}>
+      <div style={{ padding: '24px 20px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <h1 style={{ fontSize: 26, fontWeight: 700 }}>Perfil</h1>
+        <button
+          onClick={editando ? guardar : () => setEditando(true)}
+          style={{ background: editando ? 'var(--coral)' : 'transparent', color: editando ? 'white' : 'var(--coral)', border: editando ? 'none' : '1.5px solid var(--coral)', padding: editando ? '8px 18px' : '8px', borderRadius: editando ? 'var(--radius-full)' : '50%', cursor: 'pointer', fontWeight: 700, fontSize: 14, width: editando ? 'auto' : 38, height: 38, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+        >{editando ? 'Guardar' : <EditIcon />}</button>
+      </div>
+
+      <div style={{ flex: 1, overflowY: 'auto', padding: '0 20px 32px', display: 'flex', flexDirection: 'column', gap: 24 }}>
+
+        {/* Avatar */}
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8, paddingTop: 8 }}>
+          <button
+            onClick={() => editando && setShowAvatares(s => !s)}
+            style={{
+              width: 72, height: 72, borderRadius: '50%',
+              background: 'var(--coral-light)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              fontSize: 36, border: editando ? '2px dashed var(--coral)' : 'none',
+              cursor: editando ? 'pointer' : 'default', position: 'relative'
+            }}
+          >
+            {avatar}
+            {editando && <span style={{ position: 'absolute', bottom: 0, right: 0, background: 'var(--coral)', borderRadius: '50%', width: 20, height: 20, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, color: 'white' }}>✏</span>}
+          </button>
+          <span style={{ fontSize: 20, fontWeight: 700 }}>{nombre || 'Tu nombre'}</span>
+
+          {/* Avatar picker */}
+          {editando && showAvatares && (
+            <div className="card fade-in" style={{ display: 'flex', flexWrap: 'wrap', gap: 8, justifyContent: 'center', padding: 16, width: '100%' }}>
+              {AVATARES.map(e => (
+                <button key={e} onClick={() => { setAvatar(e); setShowAvatares(false) }}
+                  style={{ fontSize: 28, background: avatar === e ? 'var(--coral-light)' : 'transparent', border: avatar === e ? '2px solid var(--coral)' : '2px solid transparent', borderRadius: 12, padding: 6, cursor: 'pointer', lineHeight: 1 }}>
+                  {e}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Personal data */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+          <span className="section-label">Datos personales</span>
+          <FieldRow label="Nombre" editando={editando} valor={nombre} onChange={setNombre} placeholder="Tu nombre" />
+          <div style={{ display: 'flex', gap: 12 }}>
+            <FieldRow label="Altura" editando={editando} valor={altura} onChange={setAltura} placeholder="170" unidad="cm" type="number" style={{ flex: 1 }} />
+            <FieldRow label="Peso" editando={editando} valor={peso} onChange={setPeso} placeholder="70" unidad="kg" type="number" style={{ flex: 1 }} />
+          </div>
+          <FieldRow label="Fecha de nacimiento" editando={editando} valor={fechaNacimiento} onChange={v => setFechaNacimiento(formatFecha(v))} placeholder="DD/MM/AAAA" type="tel" maxLength={10} />
+        </div>
+
+        {/* Profiles */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+          <span className="section-label">Perfiles</span>
+          <button onClick={() => setShowNuevoPerfil(true)} className="card" style={{ display: 'flex', alignItems: 'center', gap: 14, cursor: 'pointer', border: 'none', textAlign: 'left', width: '100%' }}>
+            <AddPersonIcon />
+            <div>
+              <div style={{ fontSize: 15, fontWeight: 600 }}>Agregar persona</div>
+              <div style={{ fontSize: 13, color: 'var(--dark-50)', marginTop: 2 }}>Creá un perfil para otra persona</div>
+            </div>
+            <span style={{ marginLeft: 'auto', color: 'var(--dark-20)' }}>›</span>
+          </button>
+          {perfilesDisponibles.length > 1 && (
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+              {perfilesDisponibles.map(p => (
+                <button key={p.id} className={`chip ${perfilId === p.id ? 'active' : ''}`} onClick={() => cargar(p.id)}>{p.nombre}</button>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Danger zone */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+          <span className="section-label">Zona de peligro</span>
+          <button onClick={resetear} style={{ display: 'flex', alignItems: 'center', gap: 14, padding: 16, background: 'white', borderRadius: 'var(--radius-md)', border: '1px solid var(--danger-light)', cursor: 'pointer', textAlign: 'left', width: '100%' }}>
+            <ResetIcon />
+            <div>
+              <div style={{ fontSize: 15, fontWeight: 600, color: 'var(--danger)' }}>Resetear medidas</div>
+              <div style={{ fontSize: 12, color: 'var(--dark-50)', marginTop: 2 }}>Borra todas las medidas de este perfil</div>
+            </div>
+          </button>
+          {!esPrincipal && (
+            <button onClick={eliminar} style={{ display: 'flex', alignItems: 'center', gap: 14, padding: 16, background: 'white', borderRadius: 'var(--radius-md)', border: '1px solid var(--danger-light)', cursor: 'pointer', textAlign: 'left', width: '100%' }}>
+              <TrashIcon />
+              <div>
+                <div style={{ fontSize: 15, fontWeight: 600, color: 'var(--danger)' }}>Eliminar perfil</div>
+                <div style={{ fontSize: 12, color: 'var(--dark-50)', marginTop: 2 }}>Esta acción no se puede deshacer</div>
+              </div>
+            </button>
+          )}
+        </div>
+
+        {/* Install — collapsible */}
+        <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
+          <button
+            onClick={() => setShowInstalar(s => !s)}
+            style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', padding: 16, background: 'none', border: 'none', cursor: 'pointer', textAlign: 'left' }}
+          >
+            <span style={{ fontSize: 15, fontWeight: 600 }}>Instalar como app</span>
+            <ChevronIcon open={showInstalar} />
+          </button>
+          {showInstalar && (
+            <div className="fade-in" style={{ padding: '0 16px 16px', display: 'flex', flexDirection: 'column', gap: 14 }}>
+              <p style={{ fontSize: 13, color: 'var(--dark-50)', lineHeight: 1.6, margin: 0 }}>
+                Agregá Aiva! a tu pantalla de inicio para usarla sin abrir el navegador.
+              </p>
+              {[
+                { icon: '🖥️', titulo: 'Chrome / Edge (escritorio)', pasos: 'Buscá el ícono ⊕ en la barra de direcciones → "Instalar".' },
+                { icon: '🤖', titulo: 'Chrome (Android)', pasos: '3 puntos del menú → "Agregar a pantalla de inicio".' },
+                { icon: '🍎', titulo: 'Safari (iPhone / iPad)', pasos: 'Botón compartir (□↑) → "Agregar a inicio".' },
+              ].map(item => (
+                <div key={item.titulo} style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
+                  <span style={{ fontSize: 20 }}>{item.icon}</span>
+                  <div>
+                    <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 2 }}>{item.titulo}</div>
+                    <div style={{ fontSize: 12, color: 'var(--dark-50)', lineHeight: 1.5 }}>{item.pasos}</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        <div style={{ paddingTop: 4, textAlign: 'center', display: 'flex', flexDirection: 'column', gap: 8 }}>
+          <Link to="/privacidad" style={{ fontSize: 13, color: 'var(--dark-50)' }}>Política de privacidad</Link>
+          <a href="https://www.instagram.com/yo.soyjoe" target="_blank" rel="noopener noreferrer" style={{ fontSize: 12, color: 'var(--dark-20)' }}>By @YoSoyJoe</a>
+        </div>
+      </div>
+
+      {/* New profile modal */}
+      {showNuevoPerfil && (
+        <div className="modal-overlay" onClick={() => setShowNuevoPerfil(false)}>
+          <div className="modal-sheet" onClick={e => e.stopPropagation()}>
+            <h3 style={{ fontSize: 18, fontWeight: 700, marginBottom: 20 }}>Nuevo perfil</h3>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+              <input className="input-field" style={{ border: '1.5px solid var(--dark-20)' }} placeholder="Nombre *" value={nuevoNombre} onChange={e => setNuevoNombre(e.target.value)} autoFocus />
+              <div style={{ display: 'flex', gap: 12 }}>
+                <div style={{ flex: 1, display: 'flex', alignItems: 'center', background: 'white', borderRadius: 'var(--radius-md)', padding: '0 12px', border: '1.5px solid var(--dark-20)' }}>
+                  <input type="number" style={{ flex: 1, border: 'none', outline: 'none', padding: '12px 0', fontSize: 15, fontFamily: 'var(--font)' }} placeholder="Altura" value={nuevaAltura} onChange={e => setNuevaAltura(e.target.value)} />
+                  <span style={{ fontSize: 12, color: 'var(--dark-50)' }}>cm</span>
+                </div>
+                <div style={{ flex: 1, display: 'flex', alignItems: 'center', background: 'white', borderRadius: 'var(--radius-md)', padding: '0 12px', border: '1.5px solid var(--dark-20)' }}>
+                  <input type="number" style={{ flex: 1, border: 'none', outline: 'none', padding: '12px 0', fontSize: 15, fontFamily: 'var(--font)' }} placeholder="Peso" value={nuevoPeso} onChange={e => setNuevoPeso(e.target.value)} />
+                  <span style={{ fontSize: 12, color: 'var(--dark-50)' }}>kg</span>
+                </div>
+              </div>
+            </div>
+            <div style={{ display: 'flex', gap: 12, marginTop: 20 }}>
+              <button className="btn-outline" style={{ flex: 1 }} onClick={() => setShowNuevoPerfil(false)}>Cancelar</button>
+              <button className="btn-primary" style={{ flex: 1 }} onClick={agregarPerfil} disabled={!nuevoNombre.trim()}>Crear perfil</button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+function FieldRow({ label, editando, valor, onChange, placeholder, unidad, type = 'text', maxLength, style = {} }) {
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 6, ...style }}>
+      <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--dark-50)', textTransform: 'uppercase', letterSpacing: 0.5 }}>{label}</span>
+      {editando ? (
+        <div style={{ display: 'flex', alignItems: 'center', background: 'white', borderRadius: 'var(--radius-md)', border: '2px solid var(--coral)', padding: '0 14px' }}>
+          <input type={type} style={{ flex: 1, padding: '12px 0', border: 'none', outline: 'none', fontSize: 15, fontFamily: 'var(--font)', color: 'var(--dark)' }} value={valor} onChange={e => onChange(e.target.value)} placeholder={placeholder} maxLength={maxLength} />
+          {unidad && <span style={{ fontSize: 13, color: 'var(--dark-50)', fontWeight: 600 }}>{unidad}</span>}
+        </div>
+      ) : (
+        <div style={{ background: 'white', borderRadius: 'var(--radius-md)', padding: '14px 16px', fontSize: 15, color: 'var(--dark)' }}>
+          {valor ? `${valor}${unidad ? ` ${unidad}` : ''}` : '—'}
+        </div>
+      )}
+    </div>
+  )
+}

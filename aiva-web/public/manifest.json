@@ -1,0 +1,13 @@
+{
+  "name": "Aiva! — Tu asesora de moda",
+  "short_name": "Aiva!",
+  "description": "Guardá tus medidas, gestioná tu ropero y consultá a tu asesora de moda con IA.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#e6e7e8",
+  "theme_color": "#f58e81",
+  "orientation": "portrait",
+  "icons": [
+    { "src": "/favicon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+  ]
+}
