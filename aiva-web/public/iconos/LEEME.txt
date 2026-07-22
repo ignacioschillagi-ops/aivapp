@@ -1,0 +1,1 @@
+Subí tus iconos SVG acá con los nombres: gorra.svg, remera.svg, buzo.svg, campera.svg, pantalon.svg, calzado.svg, tapado.svg, camisa.svg, blusa.svg, vestido.svg, short.svg, falda.svg, ropaInterior.svg, medias.svg, guantes.svg, musculosa.svg, botas.svg, tacones.svg
