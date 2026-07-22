@@ -1,5 +1,0 @@
-# Subí tus SVG acá con estos nombres:
-# gorras.svg, remeras.svg, buzos.svg, camperas.svg, pantalones.svg,
-# zapatillas.svg, tapados.svg, camisas.svg, blusas.svg, vestidos.svg,
-# shorts.svg, faldas.svg, ropainterior.svg, medias.svg, guantes.svg,
-# musculosas.svg, botas.svg, tacos.svg
