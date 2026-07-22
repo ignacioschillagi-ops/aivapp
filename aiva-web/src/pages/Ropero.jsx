@@ -52,7 +52,7 @@ export default function Ropero() {
     const todasConocidas = [...CATEGORIAS_BASE, ...CATEGORIAS_EXTRA]
     const agr = personalizadas.map(p => {
       const conocida = todasConocidas.find(k => k.id === p.id)
-      return { id: p.id, categoria: p.categoria, icono: conocida?.icono || 'percha' }
+      return { id: p.id, categoria: p.categoria, icono: conocida?.icono || 'percha', campos: p.campos || [] }
     })
     setAgregadas(agr)
 
@@ -62,8 +62,7 @@ export default function Ropero() {
     const nuevosEstados = {}
     const todasPrendas = [...CATEGORIAS_BASE, ...agr]
     todasPrendas.forEach(p => {
-      const config = CONFIG_MEDIDAS[p.categoria]
-      if (!config) { nuevosEstados[p.categoria] = 'vacio'; return }
+      const config = CONFIG_MEDIDAS[p.categoria] || p.campos || []
       nuevosEstados[p.categoria] = getEstadoMedidas(perfilId, p.categoria, config)
     })
     setEstados(nuevosEstados)
