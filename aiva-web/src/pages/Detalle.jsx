@@ -43,6 +43,7 @@ function parseLineas(svgStr) {
 
 function IlustracionMedicion({ categoria, campos, valores, campoActivo, onClickLinea }) {
   const slug = SLUG_MAP[categoria]
+  const imgSrc = slug ? `/ilustraciones/${slug}.svg` : `/ilustraciones/generico.svg`
   const ilustracion = SVG_ILUSTRACIONES[categoria]
   const lineas = useMemo(() => ilustracion ? parseLineas(ilustracion.guias) : [], [ilustracion])
   const [imgOk, setImgOk] = useState(true)
@@ -53,9 +54,9 @@ function IlustracionMedicion({ categoria, campos, valores, campoActivo, onClickL
       aspectRatio: '1', position: 'relative', overflow: 'hidden',
       boxShadow: 'var(--shadow-sm)', width: '100%'
     }}>
-      {slug && imgOk ? (
+      {imgOk ? (
         <img
-          src={`/ilustraciones/${slug}.svg`}
+          src={imgSrc}
           onError={() => setImgOk(false)}
           style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'contain' }}
           alt=""
