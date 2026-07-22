@@ -1,88 +1,226 @@
-import { Outlet, NavLink } from 'react-router-dom'
+import { useState, useEffect, useCallback } from 'react'
+import { useNavigate } from 'react-router-dom'
+import {
+  storage, getPerfilActivoId, getPerfilPrincipal,
+  getPerfilesAdicionales, getEstadoMedidas,
+  getPrendasPersonalizadas, setPrendasPersonalizadas
+} from '../data/storage'
+import { CATEGORIAS_BASE, CATEGORIAS_EXTRA, ICONOS } from '../data/categorias'
+import { CONFIG_MEDIDAS } from '../data/medidas'
+import SvgIcon from '../components/SvgIcon'
 
-const LOGO_ICON_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 464.95 464.95"><path fill="#f1f2f2" d="M108.33,265.23c1.08.15,2.16.45,3.21.91,6.38,2.81,12.26,6.51,18.21,10.09v-81.28c-.01-5.07-4.44-10.29-8.29-11.03-3.89-.75-8.87,1.51-11.81,4.48l-29.3,39.7-41.12-38.97,56.79-84.96c4.95-7.4,12.86-13.07,20.8-16.39l40.98-17.13c4.64,38.43,36.24,66.05,73.95,65.61,37.03-.43,68.56-27.29,72.51-65.53l41.9,17.47c7.25,3.02,13.56,8.52,18.75,14l18.53-11.48c-7.1-9.19-15.54-16.71-25.97-21.14l-57.02-24.22c-9.05-3.84-12.78-1.6-20.13,4.18-28.46,22.35-71.68,21.79-99.75-.93-5.29-4.28-9.97-7.15-16.53-4.34l-58.52,25.1c-9.18,3.94-19.24,10.7-24.99,19.3l-63.18,94.43c-3.52,5.26-1.86,13.15,2.25,17.07l48.19,45.91c6.53,6.22,18.03,9.26,24.33,1.19l16.17-20.71.04,38.68ZM281.78,74.36c-5.01,23.65-25.61,40.16-48.34,40.66-23.49.51-46.45-13.15-52.44-39.39,33.01,15.12,69.04,16.35,100.78-1.26Z"/><path fill="#f1f2f2" d="M443.86,181.99l-35.19-53.75-16.81,13.48,31.21,47.54-41.03,38.83-31.71-42.41-17.92,24.65v180.94c-.01,5.28-4.48,8.89-9.46,8.89h-115.63c-6.78,8-14.03,15.21-21.93,21.6l139.4.05c15.86,0,28.78-12.55,28.79-28.8l.13-166.35,14.6,18.72c2.57,3.3,8.66,6.87,12.3,6.72,3.49-.15,9.63-2.51,12.4-5.13l49.28-46.5c5.07-4.79,5.28-12.8,1.57-18.48Z"/><path fill="#f58e81" d="M62.7,310.65c4.52-21.38,30.67-34.67,51.15-26.41,22.1,8.91,29.88,36.27,46.08,41.77,6.26-.32,13.21-9.47,16.76-14.81,46.74-70.31,99.78-141.41,171.45-187.13,30.04-19.16,62.24-39.23,101.38-39.09-36.94,22.23-70,41.67-99.9,70.69-72.78,70.62-114.96,145.84-162.07,233.44-5.1,9.47-15.8,16.55-24.2,17.43-11.96,1.26-21.67-5.46-28.3-15.35l-36.39-54.26c-8.14-12.14-19.74-18.6-35.96-26.28Z"/></svg>`
-
-// Outline hanger icon — tries /ilustraciones/generico.svg first, fallback inline
-function HangerIcon({ active }) {
-  // Use the percha SVG inline (currentColor = adapts to nav color)
+// Loads icon from /iconos/{icono}.svg, falls back to embedded SVG
+function CategoriaIcon({ icono, size = 28 }) {
+  const [useEmbed, setUseEmbed] = useState(false)
+  if (useEmbed) {
+    return <SvgIcon svg={ICONOS[icono] || ICONOS.percha} size={size} color="var(--coral)" />
+  }
   return (
-    <svg width="22" height="22" viewBox="0 0 100 100" fill="currentColor">
-      <path d="M96.82,71.88v3.33c-.95,3.81-4.19,7.48-8.82,7.48l-77.67.03c-3.76,0-6.37-2.73-7.14-6.01v-2.76c.86-3.53,3.33-5.56,6.66-7.14l38.64-18.22v-8.43c0-1.18.98-2.29,2.27-2.31,4.12-.04,7.67-2.62,8.44-6.33.81-3.89-.8-7.92-4.56-9.42-2.8-1.12-5.7-.38-8.04,1.33-4.86,3.56-2.25,9-5.76,8.7s-2.18-8.63,3.64-12.58c3.68-2.5,8.21-3.03,12.22-1.23,4.54,2.03,6.84,6.62,6.88,11.49.05,6.63-4.5,11.72-11.31,12.14l.14,5.89,40.2,17.8c2.51,1.11,3.36,4.13,4.22,6.22ZM10.94,78.96h76.25c2.65,0,4.57-1.67,5.13-3.88.51-2.02-.15-4.87-2.41-5.88l-38.58-17.2-40.47,19.19c-1.59.76-2.9,2.14-3.27,3.73-.52,2.2.81,4.04,3.36,4.04Z"/>
-    </svg>
+    <img
+      src={`/iconos/${icono}.svg`}
+      onError={() => setUseEmbed(true)}
+      style={{ width: size, height: size, objectFit: 'contain' }}
+      alt=""
+    />
   )
 }
 
-// Outline person icon — stroke based, no fill
-function PersonIcon() {
-  return (
-    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-      <circle cx="12" cy="7.5" r="3.5"/>
-      <path d="M4 20c0-3.5 3.6-6.5 8-6.5s8 3 8 6.5"/>
-    </svg>
-  )
-}
+export default function Ropero() {
+  const navigate = useNavigate()
+  const [perfilActivo, setPerfilActivo] = useState(null)
+  const [perfilPrincipal, setPerfilPrincipal] = useState(null)
+  const [perfilesAdicionales, setPerfilesAdicionales] = useState([])
+  const [showSelector, setShowSelector] = useState(false)
+  const [estados, setEstados] = useState({})
+  const [agregadas, setAgregadas] = useState([])
+  const [gestionando, setGestionando] = useState(false)
+  const [extrasDisponibles, setExtrasDisponibles] = useState([])
 
-export default function Layout() {
+  const cargar = useCallback(() => {
+    const perfilId = getPerfilActivoId()
+    const principal = getPerfilPrincipal()
+    const adicionales = getPerfilesAdicionales()
+    setPerfilPrincipal(principal)
+    setPerfilesAdicionales(adicionales)
+    let activo = principal
+    if (perfilId !== 'principal') {
+      activo = adicionales.find(p => p.id === perfilId) || principal
+    }
+    setPerfilActivo(activo)
+
+    const personalizadas = getPrendasPersonalizadas(perfilId)
+    const todasConocidas = [...CATEGORIAS_BASE, ...CATEGORIAS_EXTRA]
+    const agr = personalizadas.map(p => {
+      const conocida = todasConocidas.find(k => k.id === p.id)
+      return { id: p.id, categoria: p.categoria, icono: conocida?.icono || 'percha', campos: p.campos || [] }
+    })
+    setAgregadas(agr)
+
+    const agregadasIds = new Set(personalizadas.map(p => p.id))
+    setExtrasDisponibles(CATEGORIAS_EXTRA.filter(p => !agregadasIds.has(p.id)))
+
+    const nuevosEstados = {}
+    const todasPrendas = [...CATEGORIAS_BASE, ...agr]
+    todasPrendas.forEach(p => {
+      const config = CONFIG_MEDIDAS[p.categoria] || p.campos || []
+      nuevosEstados[p.categoria] = getEstadoMedidas(perfilId, p.categoria, config)
+    })
+    setEstados(nuevosEstados)
+  }, [])
+
+  useEffect(() => { cargar() }, [cargar])
+
+  const cambiarPerfil = (id) => {
+    storage.set('perfil_activo_id', id)
+    setShowSelector(false)
+    cargar()
+  }
+
+  const agregarCategoria = (prenda) => {
+    const perfilId = getPerfilActivoId()
+    const existentes = getPrendasPersonalizadas(perfilId)
+    if (!existentes.find(p => p.id === prenda.id)) {
+      setPrendasPersonalizadas(perfilId, [...existentes, { id: prenda.id, categoria: prenda.categoria }])
+      cargar()
+    }
+  }
+
+  const quitarCategoria = (id) => {
+    const perfilId = getPerfilActivoId()
+    const existentes = getPrendasPersonalizadas(perfilId)
+    setPrendasPersonalizadas(perfilId, existentes.filter(p => p.id !== id))
+    cargar()
+  }
+
+  const nombrePerfil = perfilActivo?.nombre
+  const todosPerfiles = [
+    { id: 'principal', nombre: perfilPrincipal?.nombre || 'Principal' },
+    ...perfilesAdicionales.map(p => ({ id: p.id, nombre: p.nombre }))
+  ]
+  const perfilActivoId = getPerfilActivoId()
+
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100dvh' }}>
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', paddingBottom: 'var(--nav-h)' }}>
-        <Outlet />
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', background: 'var(--bg)' }}>
+      {/* Header */}
+      <div style={{ padding: '24px 20px 16px', background: 'var(--bg)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'relative' }}>
+        <button
+          onClick={() => setShowSelector(s => !s)}
+          style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', background: 'none', border: 'none', padding: 0 }}
+        >
+          <h1 style={{ fontSize: 24, fontWeight: 700, color: 'var(--dark)' }}>
+            {nombrePerfil ? `Ropero de ${nombrePerfil}` : 'Mi Ropero'}
+          </h1>
+          <span style={{ color: 'var(--coral)', fontSize: 18 }}>▾</span>
+        </button>
       </div>
 
-      <nav style={{
-        position: 'fixed', bottom: 0, left: 0, right: 0,
-        height: 'var(--nav-h)',
-        background: 'var(--coral)',
-        display: 'flex', alignItems: 'center', justifyContent: 'space-around',
-        zIndex: 50,
-        boxShadow: '0 -2px 12px rgba(0,0,0,0.15)',
-        paddingBottom: 'env(safe-area-inset-bottom)'
-      }}>
-        <NavLink to="/" end style={{ textDecoration: 'none', flex: 1 }}>
-          {({ isActive }) => (
-            <NavItem icon={<HangerIcon active={isActive} />} label="Ropero" active={isActive} />
-          )}
-        </NavLink>
-
-        <NavLink to="/asistente" style={{ textDecoration: 'none', flex: 1 }}>
-          {({ isActive }) => (
-            <NavItem
-              icon={
-                <div style={{
-                  width: 26, height: 26, borderRadius: '50%',
-                  background: 'var(--dark)', display: 'flex',
-                  alignItems: 'center', justifyContent: 'center', flexShrink: 0,
-                  opacity: isActive ? 1 : 0.7
+      {/* Profile selector dropdown */}
+      {showSelector && (
+        <>
+          <div style={{ position: 'fixed', inset: 0, zIndex: 40 }} onClick={() => setShowSelector(false)} />
+          <div style={{
+            position: 'absolute', top: 110, left: 20, right: 20,
+            background: 'white', borderRadius: 'var(--radius-lg)',
+            boxShadow: '0 8px 32px rgba(0,0,0,0.15)',
+            zIndex: 50, padding: 8, animation: 'fadeIn 0.2s ease'
+          }}>
+            <div style={{ padding: '8px 12px 4px' }}>
+              <span className="section-label">Elegir perfil</span>
+            </div>
+            {todosPerfiles.map(p => (
+              <button key={p.id} onClick={() => cambiarPerfil(p.id)}
+                style={{
+                  width: '100%', display: 'flex', alignItems: 'center', gap: 12,
+                  padding: '12px', borderRadius: 'var(--radius-md)',
+                  background: perfilActivoId === p.id ? 'var(--coral-light)' : 'transparent',
+                  border: 'none', cursor: 'pointer', textAlign: 'left'
                 }}>
-                  <div dangerouslySetInnerHTML={{ __html: LOGO_ICON_SVG }} style={{ width: 16, height: 16 }} />
-                </div>
-              }
-              label="Asistente"
-              active={isActive}
-            />
-          )}
-        </NavLink>
+                <div style={{
+                  width: 32, height: 32, borderRadius: '50%',
+                  background: perfilActivoId === p.id ? 'var(--coral-light)' : 'var(--dark-10)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14
+                }}>👤</div>
+                <span style={{ flex: 1, fontSize: 15, fontWeight: 500, color: perfilActivoId === p.id ? 'var(--coral)' : 'var(--dark)' }}>{p.nombre}</span>
+                {perfilActivoId === p.id && <span style={{ color: 'var(--coral)' }}>✓</span>}
+              </button>
+            ))}
+            <div style={{ borderTop: '1px solid var(--bg)', margin: '4px 0' }} />
+            <button onClick={() => { setShowSelector(false); navigate('/perfil') }}
+              style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 12, padding: '12px', borderRadius: 'var(--radius-md)', background: 'transparent', border: 'none', cursor: 'pointer' }}>
+              <div style={{ width: 32, height: 32, borderRadius: '50%', background: 'var(--coral-light)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16, fontWeight: 700, color: 'var(--coral)' }}>+</div>
+              <span style={{ fontSize: 15, color: 'var(--coral)', fontWeight: 500 }}>Agregar persona</span>
+            </button>
+          </div>
+        </>
+      )}
 
-        <NavLink to="/perfil" style={{ textDecoration: 'none', flex: 1 }}>
-          {({ isActive }) => (
-            <NavItem icon={<PersonIcon />} label="Perfil" active={isActive} />
-          )}
-        </NavLink>
-      </nav>
+      {/* Clothing list */}
+      <div style={{ flex: 1, overflowY: 'auto', padding: '0 20px 20px' }}>
+        {CATEGORIAS_BASE.map(prenda => (
+          <PrendaItem key={prenda.id} prenda={prenda} estado={estados[prenda.categoria]}
+            onClick={() => navigate(`/detalle/${encodeURIComponent(prenda.categoria)}`)} />
+        ))}
+        {agregadas.map(prenda => (
+          <PrendaItem key={prenda.id} prenda={prenda} estado={estados[prenda.categoria]}
+            onClick={() => !gestionando && navigate(`/detalle/${encodeURIComponent(prenda.categoria)}`)}
+            gestionando={gestionando} onRemove={() => quitarCategoria(prenda.id)} />
+        ))}
+
+        <button onClick={() => setGestionando(g => !g)}
+          style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, padding: '14px', marginTop: 8, color: 'var(--coral)', background: 'transparent', border: 'none', cursor: 'pointer', fontSize: 14, fontWeight: 600 }}>
+          <span>{gestionando ? '▲' : '▼'}</span>
+          {gestionando ? 'Cerrar' : 'Gestionar categorías'}
+        </button>
+
+        {gestionando && (
+          <div className="card fade-in" style={{ display: 'flex', flexDirection: 'column' }}>
+            {extrasDisponibles.map((prenda, index) => (
+              <button key={prenda.id} onClick={() => agregarCategoria(prenda)}
+                style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 0', borderBottom: index < extrasDisponibles.length - 1 ? '1px solid var(--bg)' : 'none', background: 'none', border: 'none', borderBottom: index < extrasDisponibles.length - 1 ? '1px solid var(--bg)' : 'none', cursor: 'pointer', textAlign: 'left', width: '100%' }}>
+                <div style={{ width: 32, height: 32, flexShrink: 0 }}>
+                  <CategoriaIcon icono={prenda.icono} size={28} />
+                </div>
+                <span style={{ flex: 1, fontSize: 15, color: 'var(--dark)' }}>{prenda.categoria}</span>
+                <span style={{ color: 'var(--coral)', fontSize: 20, fontWeight: 300 }}>+</span>
+              </button>
+            ))}
+            <button onClick={() => navigate('/detalle/nueva')}
+              style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '14px 0', color: 'var(--coral)', background: 'none', border: 'none', cursor: 'pointer', fontSize: 14, fontWeight: 600, width: '100%' }}>
+              <span style={{ fontSize: 20 }}>+</span>Agregar tipo de prenda
+            </button>
+          </div>
+        )}
+      </div>
     </div>
   )
 }
 
-function NavItem({ icon, label, active }) {
+function PrendaItem({ prenda, estado, onClick, gestionando, onRemove }) {
+  const estadoColor = { completo: 'var(--coral)', incompleto: '#f0a500', vacio: 'var(--dark-20)' }[estado || 'vacio']
+  const estadoLabel = { completo: '● Completo', incompleto: '◐ Incompleto', vacio: '○ Sin medidas' }[estado || 'vacio']
+
   return (
-    <div style={{
-      display: 'flex', flexDirection: 'column', alignItems: 'center',
-      gap: 3, padding: '8px 4px',
-      color: active ? 'white' : 'rgba(255,255,255,0.65)',
-      transition: 'color 0.15s'
+    <div onClick={onClick} style={{
+      display: 'flex', alignItems: 'center', gap: 16, padding: '14px 0',
+      borderBottom: '1px solid var(--dark-10)',
+      cursor: gestionando ? 'default' : 'pointer',
+      opacity: gestionando ? 0.6 : 1
     }}>
-      <div style={{ opacity: active ? 1 : 0.75 }}>{icon}</div>
-      <span style={{ fontSize: 11, fontWeight: active ? 700 : 500 }}>{label}</span>
+      <div style={{
+        width: 48, height: 48, borderRadius: 'var(--radius-md)',
+        background: 'var(--coral-light)', flexShrink: 0,
+        display: 'flex', alignItems: 'center', justifyContent: 'center'
+      }}>
+        <CategoriaIcon icono={prenda.icono} size={28} />
+      </div>
+      <div style={{ flex: 1 }}>
+        <div style={{ fontSize: 16, fontWeight: 600, color: 'var(--dark)', marginBottom: 2 }}>{prenda.categoria}</div>
+        <div style={{ fontSize: 12, color: estadoColor, fontWeight: 500 }}>{estadoLabel}</div>
+      </div>
+      {gestionando && onRemove
+        ? <button onClick={e => { e.stopPropagation(); onRemove() }} style={{ color: 'var(--coral)', background: 'none', border: 'none', cursor: 'pointer', padding: 4, fontSize: 18 }}>✕</button>
+        : <span style={{ color: 'var(--dark-20)', fontSize: 18 }}>›</span>
+      }
     </div>
   )
 }
